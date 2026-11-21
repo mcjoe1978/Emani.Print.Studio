@@ -1,0 +1,84 @@
+<!doctype html><html lang="ro"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Studio de personalizare · Emani Print Store</title><style>*{box-sizing:border-box}body{margin:0;background:#f6f5f1;color:#202524;font:16px/1.5 system-ui,sans-serif}header,main{max-width:1160px;margin:auto;padding:16px clamp(16px,4vw,48px)}header{display:flex;align-items:center;gap:12px;border-bottom:1px solid #ccc}header strong{font-size:38px;letter-spacing:-3px}header b,small{font-size:13px;font-weight:750;letter-spacing:.13em}span{color:#bb472a}.intro{margin:24px 0}.intro h1{font-size:clamp(36px,6vw,72px);line-height:1.04;letter-spacing:-.065em;margin:8px 0}.layout{display:grid;grid-template-columns:1fr 1.12fr;gap:18px}.panel{background:#fff;padding:clamp(18px,3vw,32px);border:1px solid #d5d6cd;border-radius:16px;min-width:0}h2{font-size:22px;letter-spacing:-.04em;margin:0 0 15px}p{margin:8px 0 16px}.pair,.fields{display:flex;gap:12px}.pair label,.fields label:first-child{flex:1}.fields{align-items:end}.fields label:nth-child(2){width:90px}label{display:block;font-weight:650}input,select,textarea,button{font:inherit;border-radius:8px;padding:10px 12px}input,select,textarea{width:100%;margin:5px 0 14px;border:1px solid #999;background:#fff;color:#202524}textarea{resize:vertical}button{background:#253a32;color:white;border:1px solid transparent;cursor:pointer;font-weight:650}button:disabled{opacity:.55;cursor:default}#options{display:grid;gap:6px}#options button{text-align:left;background:#f4f4ef;color:#253a32}#options button[aria-pressed=true]{border-color:#30684e;background:#dfeedd}.stage{margin:12px 0;background:radial-gradient(ellipse at 50% 40%,#edf0e4,#cbd1c4);border-radius:8px}canvas{width:100%;display:block}.fields button{margin-bottom:14px}form{margin:18px 0}#status,#receipt{font-size:15px}button:focus-visible{outline:3px solid #cd8127}@media(max-width:740px){.layout{grid-template-columns:1fr}.fields{flex-wrap:wrap}.fields label:first-child{min-width:65%}.fields button{width:100%}.intro{margin:12px 0 20px}}
+</style></head><body>
+<header><strong>emani<span>✳</span></strong><b>PRINT STORE</b></header>
+<main><section class="intro"><small>ATELIER DIGITAL</small><h1>Studio de personalizare<span>.</span></h1><p>Alege produsul, descrie imprimeul și încearcă o idee pe material.</p></section>
+<div class="layout"><section class="panel"><h2>Configurează produsul</h2><div class="pair"><label>Produs<select id="product"><option>Tricou</option><option>Hanorac</option><option>Sacoșă</option></select></label><label>Culoare<select id="color"><option>Negru</option><option>Alb</option><option>Bleumarin</option></select></label></div>
+<label for="brief">Ce ai vrea să imprimi?</label><textarea id="brief" maxlength="800" rows="4">Un design futurist, minimalist, pentru un pasionat de muzică electronică.</textarea>
+<button id="generate" disabled>Generează 3 propuneri AI</button><p id="status" role="status"></p><h2 id="optionsTitle">Modele de probă</h2><div id="options"></div></section>
+<section class="panel preview"><small>PREVIZUALIZARE</small><div class="stage"><canvas id="canvas" width="640" height="600" role="img" aria-label="Simulare a imprimeului pe produs"></canvas></div><h2 id="title"></h2><p id="material"></p></section></div>
+<form id="quote" class="panel"><h2>Solicită o ofertă</h2><p>Descarcă modelul ales și detaliile cererii într-un singur fișier.</p><div class="fields"><label>E-mail pentru răspuns<input id="email" type="email" maxlength="200" required></label><label>Bucăți<input id="qty" type="number" value="1" min="1" max="999" required></label><button>Descarcă cererea</button></div><p id="receipt" role="status"></p></form></main><script>
+// Completează URL-ul HTTPS al serverului AI și, opțional, adresa atelierului.
+const API_BASE = '';
+const QUOTE_EMAIL = '';
+const el=id=>document.getElementById(id);
+const samples=[
+ {title:'Frecvență nocturnă',caption:'NIGHT SIGNAL',ink:'#73f7b2',lines:[[[0,52],[14,52],[23,31],[32,71],[44,10],[55,88],[66,38],[74,52],[100,52]]]},
+ {title:'Orbită dublă',caption:'ORBIT CLUB',ink:'#ff915f',lines:[[[5,65],[15,45],[55,20],[82,16],[94,25],[80,47],[42,72],[13,78],[5,65]],[[25,12],[51,22],[77,60],[76,82],[57,76],[31,41],[25,12]]]},
+ {title:'Ecou analogic',caption:'ANALOG ECHO',ink:'#c995ff',lines:Array.from({length:6},(_,i)=>[[5,35+i*8],[30,35+i*8],[48,8+i*8],[69,43+i*8],[95,43+i*8]])}
+];
+let designs=samples,index=0,ai=false,revision=0;
+const shapes={
+ 'Tricou':'M220 85 L155 110 64 207 131 274 176 233 166 503 Q320 528 474 503 L464 233 509 274 576 207 485 110 420 85 Q320 160 220 85 Z',
+ 'Hanorac':'M225 120 Q210 37 320 32 Q430 37 415 120 L475 147 559 445 494 467 453 324 459 513 181 513 187 324 146 467 81 445 165 147 Z',
+ 'Sacoșă':'M158 190 H482 L463 513 Q320 530 177 513 Z'};
+function render(){
+ const d=designs[index],product=el('product').value,color=el('color').value;
+ const ctx=el('canvas').getContext('2d');ctx.clearRect(0,0,640,600);
+ const fill={Negru:'#292b29',Alb:'#faf9f4',Bleumarin:'#182b42'}[color];
+ ctx.strokeStyle=fill;ctx.lineWidth=16;if(product==='Sacoșă'){ctx.beginPath();ctx.arc(320,184,70,Math.PI,0);ctx.lineTo(390,202);ctx.stroke();}
+ ctx.fillStyle=fill;ctx.fill(new Path2D(shapes[product]));ctx.strokeStyle=color==='Alb'?'#d8d8d0':'#484b49';ctx.lineWidth=3;
+ if(product==='Hanorac')ctx.stroke(new Path2D('M230 116 Q320 167 410 116 M249 418 L270 384 H370 L391 418'));
+ if(product==='Tricou')ctx.stroke(new Path2D('M211 91 Q320 182 429 91'));
+ ctx.save();ctx.translate(249,product==='Sacoșă'?240:184);ctx.scale(1.42,1.42);ctx.strokeStyle=d.ink;ctx.lineWidth=2.3;ctx.lineJoin='round';
+ for(const line of d.lines){ctx.beginPath();line.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.stroke();}
+ ctx.fillStyle=d.ink;ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText(d.caption,50,118,123);ctx.restore();
+ el('title').textContent=d.title;el('material').textContent=product+' · '+color+' · Față';
+ el('options').replaceChildren(...designs.map((item,i)=>{const b=document.createElement('button');b.textContent=item.title;b.setAttribute('aria-pressed',String(i===index));b.onclick=()=>{index=i;render();};return b;}));
+}
+async function post(url,body){const r=await fetch(API_BASE+url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw Error(data.error);return data;}
+const config=()=>({brief:el('brief').value.trim(),product:el('product').value,color:el('color').value});
+const ready=()=>ai?'Descrie ideea ta și generează trei variante.':'Poți încerca cele trei modele de probă. Generarea AI necesită conectarea unui server.';
+function reset(){revision++;designs=samples;index=0;el('optionsTitle').textContent='Modele de probă';el('status').textContent=ready();render();}
+for(const id of ['product','color','brief'])el(id).addEventListener('input',reset);
+el('generate').onclick=async()=>{if(!config().brief)return el('brief').focus();const version=revision;el('generate').disabled=true;el('status').textContent='AI-ul desenează variantele…';
+ try{const data=await post('/api/designs',config());if(version!==revision)return;designs=data.designs;index=0;el('optionsTitle').textContent='Propuneri AI';render();el('status').textContent='Selectează un model pentru previzualizare.';}
+ catch(e){if(version===revision)el('status').textContent=e.message;}finally{el('generate').disabled=!ai;}};
+function downloadQuote(quote){
+ const blob=new Blob([JSON.stringify(quote,null,2)],{type:'application/json'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download='cerere-emani.json';a.click();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+el('quote').onsubmit=async e=>{
+ e.preventDefault();
+ if(!config().brief)return el('brief').focus();
+ const quote={...config(),design:designs[index],email:el('email').value,qty:Number(el('qty').value)};
+ const button=e.submitter, receipt=el('receipt');
+ if(!API_BASE){
+   downloadQuote(quote);
+   receipt.textContent='Fișierul cererii a fost pregătit pentru descărcare.';
+   if(QUOTE_EMAIL){
+     const subject=encodeURIComponent('Cerere de ofertă · Emani Print Store');
+     const body=encodeURIComponent('Bună! Aș dori o ofertă pentru '+quote.qty+' buc. · '+quote.product+' · '+quote.color+'\nModel: '+quote.design.title+'\nDescriere: '+quote.brief+'\nE-mail: '+quote.email+'\n\nAtașez fișierul cerere-emani.json.');
+     const link=document.createElement('a');
+     link.href='mailto:'+QUOTE_EMAIL+'?subject='+subject+'&body='+body;
+     link.textContent='Deschide e-mailul și atașează fișierul';
+     receipt.append(' ',link);
+   }
+   return;
+ }
+ button.disabled=true;receipt.textContent='Se înregistrează…';
+ try{const result=await post('/api/quotes',quote);receipt.textContent='Solicitare înregistrată. Referință: '+result.id;}
+ catch(error){receipt.textContent='Solicitarea nu a fost confirmată. '+error.message;}
+ finally{button.disabled=false;}
+};
+render();
+el('status').textContent=ready();
+if(API_BASE){
+ el('quote').querySelector('button').textContent='Trimite solicitarea';
+ el('quote').querySelector('p').textContent='Trimite atelierului modelul ales și cantitatea dorită.';
+ fetch(API_BASE+'/api/status').then(r=>r.json()).then(s=>{
+   ai=s.ai===true;el('generate').disabled=!ai;el('status').textContent=ready();
+ }).catch(()=>{el('status').textContent='Serverul AI nu răspunde momentan.';});
+}
+</script></body></html>
